@@ -39,3 +39,49 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+
+			pom {
+				name = 'spring-boot-starter-postgres-cdc'
+				description = 'Spring Boot Starter for Postgres CDC'
+				url = 'https://github.com/MoshkaBortmanStarr'
+
+				licenses {
+					license {
+						name = 'The Apache Software License, Version 2.0'
+						url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+					}
+				}
+
+				developers {
+					developer {
+						id = '1'
+						name = 'Moshka Bortman'
+						email = 'mishka.sshishka@gmail.com'
+					}
+				}
+
+				scm {
+					connection = 'scm:git:https://github.com/MoshkaBortmanStar/postgres-cdc-starter.git'
+					developerConnection = 'scm:git:ssh://github.com:MoshkaBortmanStar/postgres-cdc-starter.git'
+					url = 'https://github.com/MoshkaBortmanStar/postgres-cdc-starter'
+				}
+			}
+		}
+	}
+
+	repositories {
+		maven {
+			name = 'OSSRH'
+			url = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
+			credentials {
+				username = project.findProperty("ossrhUsername") ?: System.getenv("OSSRH_USERNAME")
+				password = project.findProperty("ossrhPassword") ?: System.getenv("OSSRH_PASSWORD")
+			}
+		}
+	}
+}
