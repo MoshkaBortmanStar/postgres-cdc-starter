@@ -1,1 +1,1 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=com.bortmanco.postgrescdcstarter.PostgresCdcStarterConfiguration
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=io.github.moshkabortmanstar.PostgresCdcStarterConfiguration
