@@ -45,6 +45,7 @@ public class ReplicationSlotPublicationUtil {
     private static final String DROP_TABLE_FROM_PUBLICATION_QUERY = "ALTER PUBLICATION %s DROP TABLE %s;";
     private static final String CRATE_HEARTBEAT_TABLE = "CREATE TABLE IF NOT EXISTS %s (id SERIAL PRIMARY KEY, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);";
     private static final String INSERT_HEARTBEAT_TABLE = "INSERT INTO %s DEFAULT VALUES;";
+    private static final String UPDATE_HEARTBEAT_TABLE = "UPDATE %s SET created_at = CURRENT_TIMESTAMP WHERE id = 1;";
 
     /**
      * Drop the publication
@@ -169,6 +170,15 @@ public class ReplicationSlotPublicationUtil {
 
     public static void initializeFirstRowHeartbeatTable(Connection connection, String heartbeatTable) throws SQLException {
         executeUpdate(connection, String.format(INSERT_HEARTBEAT_TABLE, heartbeatTable));
+    }
+
+    /**
+     * Update heartbeat table for cleaning the replication slot
+     * @param connection - connection to the database
+     * @param heartbeatTable - name of the heartbeat table
+     * */
+    public static void updateHeartbeatTable(Connection connection, String heartbeatTable) throws SQLException {
+        executeUpdate(connection, String.format(UPDATE_HEARTBEAT_TABLE, heartbeatTable));
     }
 
     /**
