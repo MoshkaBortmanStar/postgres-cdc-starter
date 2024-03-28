@@ -24,6 +24,14 @@ dependencies {
 }
 ``` 
 
+In application.yml enable starter
+
+```yml
+postgres-cdc:
+  decoder:
+    enabled: true
+```
+
 ##Starting the Engine
 
 ```java
