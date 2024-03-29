@@ -20,7 +20,7 @@ Example of adding dependency in `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.bortmanco:postgres-cdc-starter:0.0.1'
+    implementation 'com.bortmanco:postgres-cdc-starter:0.0.3'
 }
 ``` 
 
