@@ -1,10 +1,10 @@
-package io.github.moshkabortmanstar.cache.config;
+package io.github.moshkabortmanstar.config;
 
 
-import io.github.moshkabortmanstar.cache.decode.PgoutHendler;
-import io.github.moshkabortmanstar.cache.decode.PgoutMsgDecoder;
-import io.github.moshkabortmanstar.cache.decode.impl.PgoutHendlerImpl;
-import io.github.moshkabortmanstar.cache.decode.impl.PgoutMsgDecoderImpl;
+import io.github.moshkabortmanstar.decode.PgoutHendler;
+import io.github.moshkabortmanstar.decode.PgoutMsgDecoder;
+import io.github.moshkabortmanstar.decode.impl.PgoutHendlerImpl;
+import io.github.moshkabortmanstar.decode.impl.PgoutMsgDecoderImpl;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

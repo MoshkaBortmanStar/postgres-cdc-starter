@@ -1,6 +1,7 @@
-package io.github.moshkabortmanstar.cache.util;
+package io.github.moshkabortmanstar.util;
 
-import io.github.moshkabortmanstar.cache.data.RowChangesStructure;
+import io.github.moshkabortmanstar.data.RowChangesStructure;
+import io.github.moshkabortmanstar.data.enums.PostgresConnectionProperty;
 import org.postgresql.PGConnection;
 import org.postgresql.replication.ReplicationSlotInfo;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
@@ -11,17 +12,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Properties;
-
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Param.ASSUME_MIN_SERVER_VERSION;
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Param.KEEP_ALIVE;
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Param.PASSWORD;
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Param.PREFER_QUERY_MODE;
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Param.REPLICATION;
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Param.USER;
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Value.ASSUME_VERSION_VALUE;
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Value.DATABASE;
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Value.SIMPLE;
-import static io.github.moshkabortmanstar.cache.data.enums.PostgresConnectionProperty.Value.TRUE;
 
 /**
  * ReplicationSlotPublicationUtil is a utility class that contains methods for managing replication slots and publications
@@ -222,12 +212,12 @@ public class ReplicationSlotPublicationUtil {
     public static Connection creteConnectionForReplication(DataSourceProperties dataSourceProperties) {
         try {
             var props = new Properties();
-            props.setProperty(REPLICATION.getParameter(), DATABASE.getPropertyValue());
-            props.setProperty(USER.getParameter(), dataSourceProperties.getUsername());
-            props.setProperty(PASSWORD.getParameter(), dataSourceProperties.getPassword());
-            props.setProperty(ASSUME_MIN_SERVER_VERSION.getParameter(), ASSUME_VERSION_VALUE.getPropertyValue());
-            props.setProperty(PREFER_QUERY_MODE.getParameter(), SIMPLE.getPropertyValue());
-            props.setProperty(KEEP_ALIVE.getParameter(), TRUE.getPropertyValue());
+            props.setProperty(PostgresConnectionProperty.Param.REPLICATION.getParameter(), PostgresConnectionProperty.Value.DATABASE.getPropertyValue());
+            props.setProperty(PostgresConnectionProperty.Param.USER.getParameter(), dataSourceProperties.getUsername());
+            props.setProperty(PostgresConnectionProperty.Param.PASSWORD.getParameter(), dataSourceProperties.getPassword());
+            props.setProperty(PostgresConnectionProperty.Param.ASSUME_MIN_SERVER_VERSION.getParameter(), PostgresConnectionProperty.Value.ASSUME_VERSION_VALUE.getPropertyValue());
+            props.setProperty(PostgresConnectionProperty.Param.PREFER_QUERY_MODE.getParameter(), PostgresConnectionProperty.Value.SIMPLE.getPropertyValue());
+            props.setProperty(PostgresConnectionProperty.Param.KEEP_ALIVE.getParameter(), PostgresConnectionProperty.Value.TRUE.getPropertyValue());
 
             return DriverManager.getConnection(dataSourceProperties.getUrl(), props);
         } catch (SQLException e) {

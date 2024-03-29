@@ -1,6 +1,6 @@
-package io.github.moshkabortmanstar.cache.data;
+package io.github.moshkabortmanstar.data;
 
-import io.github.moshkabortmanstar.cache.data.enums.OperationEnum;
+import io.github.moshkabortmanstar.data.enums.OperationEnum;
 import lombok.Builder;
 import lombok.Data;
 

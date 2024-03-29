@@ -1,4 +1,4 @@
-package io.github.moshkabortmanstar.cache.data;
+package io.github.moshkabortmanstar.data;
 
 import lombok.Builder;
 import lombok.Data;

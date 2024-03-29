@@ -1,4 +1,4 @@
-package io.github.moshkabortmanstar.cache.data.enums;
+package io.github.moshkabortmanstar.data.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

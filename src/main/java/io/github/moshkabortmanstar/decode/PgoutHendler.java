@@ -1,7 +1,7 @@
-package io.github.moshkabortmanstar.cache.decode;
+package io.github.moshkabortmanstar.decode;
 
 
-import io.github.moshkabortmanstar.cache.data.RowChangesStructure;
+import io.github.moshkabortmanstar.data.RowChangesStructure;
 
 import java.nio.ByteBuffer;
 import java.util.List;

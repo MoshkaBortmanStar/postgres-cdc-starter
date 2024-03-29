@@ -1,6 +1,6 @@
 package io.github.moshkabortmanstar.cache;
 
-import io.github.moshkabortmanstar.cache.data.RelationMetaInfo;
+import io.github.moshkabortmanstar.data.RelationMetaInfo;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

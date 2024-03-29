@@ -1,6 +1,6 @@
-package io.github.moshkabortmanstar.cache;
+package io.github.moshkabortmanstar;
 
-import io.github.moshkabortmanstar.cache.config.PostgresCDCConfig;
+import io.github.moshkabortmanstar.config.PostgresCDCConfig;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 

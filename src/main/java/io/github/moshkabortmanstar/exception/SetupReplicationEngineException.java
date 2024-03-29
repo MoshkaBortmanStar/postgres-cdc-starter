@@ -1,4 +1,4 @@
-package io.github.moshkabortmanstar.cache.exception;
+package io.github.moshkabortmanstar.exception;
 
 import java.io.Serial;
 
