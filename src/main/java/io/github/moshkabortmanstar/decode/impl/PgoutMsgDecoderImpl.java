@@ -123,7 +123,7 @@ public class PgoutMsgDecoderImpl implements PgoutMsgDecoder {
                 final String valueStr = convertToStringValue(byteMsg);
                 listOfValues.add(valueStr);
             } else if (type == 'n') { // null data
-                listOfValues.add("null");
+                listOfValues.add(null);
             } else {
                 log.trace("Unsupported type '{}' for column: '{}'", type, column);
             }
