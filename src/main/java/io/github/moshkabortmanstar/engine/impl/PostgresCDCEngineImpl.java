@@ -3,10 +3,13 @@ package io.github.moshkabortmanstar.engine.impl;
 
 import io.github.moshkabortmanstar.cache.RelationMetaInfoCache;
 import io.github.moshkabortmanstar.data.RowChangesStructure;
+import io.github.moshkabortmanstar.data.enums.OperationEnum;
 import io.github.moshkabortmanstar.data.enums.SlotOptionEnum;
 import io.github.moshkabortmanstar.decode.PgoutHendler;
+import io.github.moshkabortmanstar.engine.CdcEngineErrorHandler;
 import io.github.moshkabortmanstar.engine.CdcEngineOrchestrator;
 import io.github.moshkabortmanstar.engine.PostgresCDCEngine;
+import io.github.moshkabortmanstar.exception.ReplicationStreamReadingException;
 import io.github.moshkabortmanstar.exception.SetupReplicationEngineException;
 import io.github.moshkabortmanstar.util.ReplicationSlotPublicationUtil;
 import lombok.Builder;
@@ -36,6 +39,8 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
     private CdcEngineOrchestrator orchestrator;
     private DataSourceProperties properties;
     private PgoutHendler pgoutHendler;
+    @Builder.Default
+    private CdcEngineErrorHandler errorHandler = (error, strEngineName) -> log.error("Stop engine {} with error {}", strEngineName, error.getMessage());
     private Consumer<List<RowChangesStructure>> changesStructureConsumer;
 
 
@@ -65,7 +70,7 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
                                 continue;
                             }
 
-                            pgoutHendler.decodeHandle(msg,
+                            var operation = pgoutHendler.decodeHandle(msg,
                                     listOfTransaction,
                                     rowChangesStructuresList -> {
                                         if (ReplicationSlotPublicationUtil.isHeartbeatTable(ReplicationSlotPublicationUtil.generateHeartbeatTableName(slotName), rowChangesStructuresList.get(0))) {
@@ -75,17 +80,29 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
                                         }
                                     }
                             );
-                            stream.setAppliedLSN(stream.getLastReceiveLSN());
-                            stream.setFlushedLSN(stream.getLastReceiveLSN());
+
+                            if (operation == OperationEnum.COMMIT) {
+                                changesStructureConsumer.accept(listOfTransaction);
+                                listOfTransaction.clear();
+                                stream.setAppliedLSN(stream.getLastReceiveLSN());
+                                stream.setFlushedLSN(stream.getLastReceiveLSN());
+                            }
                         }
-                    } catch (SQLException | InterruptedException e) {
-                        sink.error(e);
+                    } catch (SQLException sqlException) {
+                        sink.error(sqlException);
+                    } catch (Exception e) {
+                        log.error("Error during engine {} run, error {}, message cannot be committed", engineName, e.getMessage());
+                        throw new ReplicationStreamReadingException("Error during engine run", e);
                     }
                 }).subscribeOn(Schedulers.boundedElastic())
                 .doOnNext(rowChangesStructuresList -> changesStructureConsumer.accept((List<RowChangesStructure>) rowChangesStructuresList))
                 .doOnError(e -> {
                     log.error("Error during engine {} run, error {}", engineName, e.getMessage());
-                    orchestrator.restartEngine(engineName);  // Перезапустить движок в случае ошибки
+                    if (e instanceof SQLException) {
+                        orchestrator.restartEngine(engineName);  // Перезапустить движок в случае ошибки
+                    } else {
+                        errorHandler.handleError(e, engineName);
+                    }
                 })
                 .subscribe();
     }

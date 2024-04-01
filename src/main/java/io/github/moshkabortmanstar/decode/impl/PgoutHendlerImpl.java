@@ -3,14 +3,17 @@ package io.github.moshkabortmanstar.decode.impl;
 
 import io.github.moshkabortmanstar.cache.RelationMetaInfoCache;
 import io.github.moshkabortmanstar.data.RowChangesStructure;
+import io.github.moshkabortmanstar.data.enums.OperationEnum;
 import io.github.moshkabortmanstar.decode.PgoutHendler;
 import io.github.moshkabortmanstar.decode.PgoutMsgDecoder;
+import io.github.moshkabortmanstar.exception.ReplicationStreamReadingException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static io.github.moshkabortmanstar.data.enums.OperationEnum.UNKNOWN_OPERATION;
 import static io.github.moshkabortmanstar.data.enums.OperationEnum.getOperationEnum;
 
 
@@ -24,14 +27,13 @@ public class PgoutHendlerImpl implements PgoutHendler {
     }
 
     @Override
-    public void decodeHandle(ByteBuffer buffer,
-                             List<RowChangesStructure> rowChangesStructureList,
-                             Consumer<List<RowChangesStructure>> changesStructureConsumer) {
+    public OperationEnum decodeHandle(ByteBuffer buffer,
+                                      List<RowChangesStructure> rowChangesStructureList,
+                                      Consumer<List<RowChangesStructure>> changesStructureConsumer) {
         if (buffer.remaining() < 1) {
-            log.info("Buffer is empty");
-            return;
+            log.warn("Buffer is empty");
+            throw new ReplicationStreamReadingException("Buffer is empty");
         }
-
         var operationByte = (char) buffer.get();
         var operation = getOperationEnum(operationByte);
         var cobyBuffer = buffer.duplicate();
@@ -39,26 +41,23 @@ public class PgoutHendlerImpl implements PgoutHendler {
         switch (operation) {
             case BEGIN:
                 log.info("Transaction {} start, size of changes {}", operation.name(), rowChangesStructureList.size());
-                break;
+                return operation;
             case RELATION:
                 int relationId = buffer.getInt();
                 var relationDto = pgoutMsgDecoder.crateRelationMetaInfo(buffer);
                 RelationMetaInfoCache.put(relationId, relationDto);
                 log.info("RelationDto {}", relationDto);
-                break;
+                return operation;
             case INSERT, UPDATE, DELETE, TRUNCATE:
                 rowChangesStructureList.add(pgoutMsgDecoder.createRowChangesStructure(cobyBuffer, operation));
-                break;
+                return operation;
             case COMMIT:
-                changesStructureConsumer.accept(rowChangesStructureList);
-                rowChangesStructureList.clear();
                 log.info("Transaction {} end", operation.name());
-                break;
+                return operation;
             default:
                 log.error("Unsupported command: {}", operationByte);
+                return UNKNOWN_OPERATION;
         }
-
     }
-
 
 }
