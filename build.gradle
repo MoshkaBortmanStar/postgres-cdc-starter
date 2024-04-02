@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'io.github.moshkabortmanstar'
-version = '0.0.5'
+version = '0.0.6'
 
 java {
 	sourceCompatibility = '17'
@@ -58,7 +58,7 @@ mavenPublishing {
 
 	signAllPublications()
 	//when version is updated, update the version in the pom as well
-	coordinates("io.github.moshkabortmanstar", "postgres-cdc-starter", "0.0.5")
+	coordinates("io.github.moshkabortmanstar", "postgres-cdc-starter", "0.0.6")
 	pom {
 		name = 'spring-boot-starter-postgres-cdc'
 		description = 'Spring Boot Starter for Postgres CDC'

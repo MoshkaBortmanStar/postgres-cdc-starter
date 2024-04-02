@@ -9,9 +9,10 @@ import io.github.moshkabortmanstar.decode.PgoutHendler;
 import io.github.moshkabortmanstar.engine.CdcEngineErrorHandler;
 import io.github.moshkabortmanstar.engine.CdcEngineOrchestrator;
 import io.github.moshkabortmanstar.engine.PostgresCDCEngine;
+import io.github.moshkabortmanstar.exception.ReplicationSlotConnectionException;
 import io.github.moshkabortmanstar.exception.ReplicationStreamReadingException;
 import io.github.moshkabortmanstar.exception.SetupReplicationEngineException;
-import io.github.moshkabortmanstar.util.ReplicationSlotPublicationUtil;
+import io.github.moshkabortmanstar.service.ReplicationSlotPublicationService;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.postgresql.PGConnection;
@@ -32,17 +33,16 @@ import java.util.function.Consumer;
 @Builder
 public class PostgresCDCEngineImpl implements PostgresCDCEngine {
 
-
     private String slotName;
     private String engineName;
     private boolean isRunning;
     private CdcEngineOrchestrator orchestrator;
     private DataSourceProperties properties;
     private PgoutHendler pgoutHendler;
+    private ReplicationSlotPublicationService replicationSlotPublicationService;
     @Builder.Default
     private CdcEngineErrorHandler errorHandler = (error, strEngineName) -> log.error("Stop engine {} with error {}", strEngineName, error.getMessage());
     private Consumer<List<RowChangesStructure>> changesStructureConsumer;
-
 
     /**
      * The main method of the engine, it reads the data from the replication stream and decodes it
@@ -51,7 +51,7 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
      * preferQueryMode=simple
      * assumeMinServerVersion=10
      * You need to provide these parameters in your overridden method setupReplicationStreamEngine
-     * You can use standard implementation PostgresCDCEngineImpl.setupReplicationStreamEngine (ReplicationSlotUtil.creteConnectionForReplication)
+     * You can use standard implementation replicationSlotPublicationService.setupReplicationStreamEngine (replicationSlotPublicationService.creteConnectionForReplication)
      */
     @Override
     public void run() {
@@ -73,8 +73,8 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
                             var operation = pgoutHendler.decodeHandle(msg,
                                     listOfTransaction,
                                     rowChangesStructuresList -> {
-                                        if (ReplicationSlotPublicationUtil.isHeartbeatTable(ReplicationSlotPublicationUtil.generateHeartbeatTableName(slotName), rowChangesStructuresList.get(0))) {
-                                            log.info("Heartbeat {}, clean space in replication slot", ReplicationSlotPublicationUtil.generateHeartbeatTableName(slotName));
+                                        if (replicationSlotPublicationService.isHeartbeatTable(replicationSlotPublicationService.generateHeartbeatTableName(slotName), rowChangesStructuresList.get(0))) {
+                                            log.info("Heartbeat {}, clean space in replication slot", replicationSlotPublicationService.generateHeartbeatTableName(slotName));
                                         } else {
                                             sink.next(rowChangesStructuresList);
                                         }
@@ -88,18 +88,18 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
                                 stream.setFlushedLSN(stream.getLastReceiveLSN());
                             }
                         }
-                    } catch (SQLException sqlException) {
-                        sink.error(sqlException);
+                    } catch (SQLException | SetupReplicationEngineException conException) {
+                        sink.error(new ReplicationSlotConnectionException("Error connection to replication slot", conException));
                     } catch (Exception e) {
                         log.error("Error during engine {} run, error {}, message cannot be committed", engineName, e.getMessage());
-                        throw new ReplicationStreamReadingException("Error during engine run", e);
+                        sink.error(new ReplicationStreamReadingException("Error during engine run", e));
                     }
                 }).subscribeOn(Schedulers.boundedElastic())
                 .doOnNext(rowChangesStructuresList -> changesStructureConsumer.accept((List<RowChangesStructure>) rowChangesStructuresList))
                 .doOnError(e -> {
                     log.error("Error during engine {} run, error {}", engineName, e.getMessage());
-                    if (e instanceof SQLException) {
-                        orchestrator.restartEngine(engineName);  // Перезапустить движок в случае ошибки
+                    if (e instanceof ReplicationSlotConnectionException) {
+                        orchestrator.restartEngine(engineName);  // Restart engine if connection error
                     } else {
                         errorHandler.handleError(e, engineName);
                     }
@@ -115,23 +115,23 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
             log.info("Starting engine {}, clear cache", engineName);
 
             // 1. Get the connection and unwrap it to PGConnection
-            var connection = ReplicationSlotPublicationUtil.creteConnectionForReplication(properties);
+            var connection = replicationSlotPublicationService.creteConnectionForReplication(properties);
             var streamConnection = connection.unwrap(PGConnection.class);
 
             // 2. Check replication slot, create if not exists
-            if (!ReplicationSlotPublicationUtil.isSlotExist(connection, slotName)) {
+            if (!replicationSlotPublicationService.isSlotExist(connection, slotName)) {
                 log.info("Slot {} does not exist, creating", slotName);
-                ReplicationSlotPublicationUtil.createReplicationSlot(streamConnection, slotName);
+                replicationSlotPublicationService.createReplicationSlot(streamConnection, slotName);
             }
 
             // 3. Check publication, create if not exists, name of publication is the same as slot name
-            if (!ReplicationSlotPublicationUtil.isPublicationExist(connection, slotName)) {
-                ReplicationSlotPublicationUtil.createPublication(connection, slotName);
+            if (!replicationSlotPublicationService.isPublicationExist(connection, slotName)) {
+                replicationSlotPublicationService.createPublication(connection, slotName);
             }
 
             // 4. Create heartbeat table
-            var heartbeatTable = ReplicationSlotPublicationUtil.generateHeartbeatTableName(slotName);
-            ReplicationSlotPublicationUtil.createHeartbeatTable(connection, heartbeatTable);
+            var heartbeatTable = replicationSlotPublicationService.generateHeartbeatTableName(slotName);
+            replicationSlotPublicationService.createHeartbeatTable(connection, heartbeatTable);
 
             // 5. Add heartbeat table to publication
             addHeartbeatTableToPublication(connection, heartbeatTable);
@@ -153,8 +153,8 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
 
     private void addHeartbeatTableToPublication(Connection connection, String heartbeatTable) throws SQLException {
         try {
-            ReplicationSlotPublicationUtil.addTableToPublication(connection, slotName, heartbeatTable);
-            ReplicationSlotPublicationUtil.initializeFirstRowHeartbeatTable(connection, heartbeatTable);
+            replicationSlotPublicationService.addTableToPublication(connection, slotName, heartbeatTable);
+            replicationSlotPublicationService.initializeFirstRowHeartbeatTable(connection, heartbeatTable);
         } catch (SQLException e) {
             log.warn("Table already added to table {}, error {}", heartbeatTable, e.getMessage());
         }
