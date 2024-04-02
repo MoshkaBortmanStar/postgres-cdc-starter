@@ -82,7 +82,7 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
                             );
 
                             if (operation == OperationEnum.COMMIT) {
-                                changesStructureConsumer.accept(listOfTransaction);
+                                executeConsumer(listOfTransaction);
                                 listOfTransaction.clear();
                                 stream.setAppliedLSN(stream.getLastReceiveLSN());
                                 stream.setFlushedLSN(stream.getLastReceiveLSN());
@@ -151,6 +151,19 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
 
     }
 
+    public void stopEngine() {
+        log.info("Initiating stop of engine {}", engineName);
+        isRunning = false;
+    }
+
+    private void executeConsumer(List<RowChangesStructure> rowChangesStructuresList) {
+        try {
+            changesStructureConsumer.accept(rowChangesStructuresList);
+        } catch (Exception e) {
+            errorHandler.handleError(e, engineName);
+        }
+    }
+
     private void addHeartbeatTableToPublication(Connection connection, String heartbeatTable) throws SQLException {
         try {
             replicationSlotPublicationService.addTableToPublication(connection, slotName, heartbeatTable);
@@ -158,11 +171,6 @@ public class PostgresCDCEngineImpl implements PostgresCDCEngine {
         } catch (SQLException e) {
             log.warn("Table already added to table {}, error {}", heartbeatTable, e.getMessage());
         }
-    }
-
-    public void stopEngine() {
-        log.info("Initiating stop of engine {}", engineName);
-        isRunning = false;
     }
 
     public boolean isRunning() {
